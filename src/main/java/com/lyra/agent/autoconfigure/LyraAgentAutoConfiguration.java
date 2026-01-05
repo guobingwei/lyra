@@ -79,9 +79,11 @@ public class LyraAgentAutoConfiguration {
      * @return LLMProvider 实例
      */
     public LLMProvider llmProvider(LyraAgentProperties props) {
-        if ("openai".equalsIgnoreCase(props.getLlm().getProvider())) {
-            return new OpenAILLMProvider(props.getLlm());
+        String provider = props.getLlm().getProvider();
+        if ("gemini".equalsIgnoreCase(provider)) {
+            return new com.lyra.agent.llm.GeminiLLMProvider(props.getLlm());
         }
+        // Default to OpenAI
         return new OpenAILLMProvider(props.getLlm());
     }
 
