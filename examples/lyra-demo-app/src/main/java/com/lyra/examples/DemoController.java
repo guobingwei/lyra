@@ -1,7 +1,10 @@
 package com.lyra.examples;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.lyra.agent.agent.ReActAgent;
+import com.lyra.agent.agent.Agent;
+import com.lyra.agent.agent.AgentManager;
+import com.lyra.agent.agent.Message;
+import com.lyra.agent.agent.ModeResult;
 import com.lyra.agent.autoconfigure.LyraAgentProperties;
 import com.lyra.agent.event.AgentEvent;
 import com.lyra.agent.event.Event;
@@ -26,6 +29,7 @@ import java.util.concurrent.Executors;
 @RestController
 public class DemoController {
 
+    private final AgentManager agentManager;
     private final LLMProvider llmProvider;
     private final ToolRegistry toolRegistry;
     private final LyraAgentProperties properties;
@@ -33,10 +37,11 @@ public class DemoController {
     private final ExecutorService executor = Executors.newCachedThreadPool();
     private final ObjectMapper objectMapper = new ObjectMapper();
 
-    public DemoController(LLMProvider llmProvider, 
+    public DemoController(AgentManager agentManager, LLMProvider llmProvider, 
                           ToolRegistry toolRegistry, 
                           LyraAgentProperties properties, 
                           ResourceLoader resourceLoader) {
+        this.agentManager = agentManager;
         this.llmProvider = llmProvider;
         this.toolRegistry = toolRegistry;
         this.properties = properties;
@@ -44,7 +49,7 @@ public class DemoController {
     }
 
     @GetMapping(value = "/demo/chat", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-    public SseEmitter chat(@RequestParam String query) {
+    public SseEmitter chat(@RequestParam("query") String query) {
         SseEmitter emitter = new SseEmitter(180000L); // 3 minutes timeout
 
         executor.submit(() -> {
@@ -73,18 +78,12 @@ public class DemoController {
                 eventBus.subscribe("agent.finish", listener);
                 eventBus.subscribe("agent.error", listener);
 
-                // 3. 构建独立的 ReActAgent 实例
-                Resource promptResource = resourceLoader.getResource(properties.getPromptPath());
-                ReActAgent agent = new ReActAgent(
-                    llmProvider, 
-                    toolRegistry, 
-                    eventBus, 
-                    properties.getMaxSteps(), 
-                    promptResource
-                );
+                // 5. Get the default ReAct agent
+                Agent agent = agentManager.defaultAgent("react");
 
-                // 4. 执行 Agent
-                agent.run(query);
+                // 6. Execute Agent with the new architecture
+                Message inputMessage = Message.user(query);
+                ModeResult result = agentManager.run(agent, inputMessage);
                 
                 // 5. 完成 SSE
                 emitter.send(SseEmitter.event().name("DONE").data(""));

@@ -1,6 +1,6 @@
 package com.lyra.agent.autoconfigure;
 
-import com.lyra.agent.agent.ReActAgent;
+import com.lyra.agent.agent.*;
 import com.lyra.agent.event.EventBus;
 import com.lyra.agent.event.SimpleEventBus;
 import com.lyra.agent.llm.EmbeddingModel;
@@ -82,6 +82,10 @@ public class LyraAgentAutoConfiguration {
         String provider = props.getLlm().getProvider();
         if ("gemini".equalsIgnoreCase(provider)) {
             return new com.lyra.agent.llm.GeminiLLMProvider(props.getLlm());
+        } else if ("deepseek".equalsIgnoreCase(provider)) {
+            return new com.lyra.agent.llm.DeepSeekLLMProvider(props.getLlm());
+        } else if ("qwen".equalsIgnoreCase(provider)) {
+            return new com.lyra.agent.llm.QwenLLMProvider(props.getLlm());
         }
         // Default to OpenAI
         return new OpenAILLMProvider(props.getLlm());
@@ -111,18 +115,47 @@ public class LyraAgentAutoConfiguration {
 
     @Bean
     /**
-     * 构建 ReActAgent。
+     * 构建 ReactMode。
      *
      * @param llmProvider LLM 提供者
      * @param toolRegistry 工具注册表
      * @param eventBus 事件总线
      * @param props 属性配置
      * @param rl 资源加载器，用于读取 Prompt 模板
-     * @return ReActAgent 实例
+     * @return ReactMode 实例
      */
-    public ReActAgent reActAgent(LLMProvider llmProvider, ToolRegistry toolRegistry, EventBus eventBus, LyraAgentProperties props, ResourceLoader rl) {
+    public ReactMode reactMode(LLMProvider llmProvider, ToolRegistry toolRegistry, EventBus eventBus, LyraAgentProperties props, ResourceLoader rl) {
         Resource prompt = rl.getResource(props.getPromptPath());
-        return new ReActAgent(llmProvider, toolRegistry, eventBus, props.getMaxSteps(), prompt);
+        return new ReactMode(llmProvider, toolRegistry, eventBus, props.getMaxSteps(), prompt);
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
+    /**
+     * 构建 ModeRegistry。
+     *
+     * @param reactMode ReAct mode
+     * @return ModeRegistry 实例
+     */
+    public ModeRegistry modeRegistry(ReactMode reactMode) {
+        ModeRegistry registry = new SimpleModeRegistry();
+        registry.register(reactMode);
+        return registry;
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
+    /**
+     * 构建 AgentManager。
+     *
+     * @param modeRegistry Mode registry
+     * @param llmProvider LLM provider
+     * @param toolRegistry Tool registry
+     * @param eventBus Event bus
+     * @return AgentManager 实例
+     */
+    public AgentManager agentManager(ModeRegistry modeRegistry, LLMProvider llmProvider, ToolRegistry toolRegistry, EventBus eventBus) {
+        return new SimpleAgentManager(modeRegistry, llmProvider, toolRegistry, eventBus);
     }
 
     @Bean
@@ -133,7 +166,7 @@ public class LyraAgentAutoConfiguration {
      * @param agent ReActAgent 实例
      * @return 控制器实例
      */
-    public AgentController agentController(ReActAgent agent) {
+    public AgentController agentController(AgentManager agent) {
         return new AgentController(agent);
     }
 }

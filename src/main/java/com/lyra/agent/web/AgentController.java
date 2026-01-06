@@ -1,6 +1,7 @@
 package com.lyra.agent.web;
 
-import com.lyra.agent.agent.ReActAgent;
+import com.lyra.agent.agent.AgentManager;
+import com.lyra.agent.agent.Message;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -17,10 +18,10 @@ import java.util.Map;
  * 提供与智能体交互的 REST 接口。
  */
 public class AgentController {
-    private final ReActAgent agent;
+    private final AgentManager agentManager;
 
-    public AgentController(ReActAgent agent) {
-        this.agent = agent;
+    public AgentController(AgentManager agentManager) {
+        this.agentManager = agentManager;
     }
 
     /**
@@ -31,7 +32,13 @@ public class AgentController {
      */
     @PostMapping("/query")
     public ResponseEntity<Map<String, String>> query(@RequestBody Map<String, String> req) {
-        String answer = agent.run(req.get("question"));
+        // Get the default ReAct agent
+        com.lyra.agent.agent.Agent agent = agentManager.defaultAgent("react");
+        // Create a user message
+        Message message = Message.user(req.get("question"));
+        // Run the agent
+        com.lyra.agent.agent.ModeResult result = agentManager.run(agent, message);
+        String answer = result.getFinalAnswer();
         java.util.Map<String, String> resp = new java.util.HashMap<>();
         resp.put("answer", answer);
         return ResponseEntity.ok(resp);
