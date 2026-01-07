@@ -9,8 +9,6 @@ import com.lyra.agent.agent.ReactMode;
 import com.lyra.agent.agent.SimpleAgentManager;
 import com.lyra.agent.agent.SimpleModeRegistry;
 import com.lyra.agent.autoconfigure.LyraAgentProperties;
-import com.lyra.agent.event.AgentEvent;
-import com.lyra.agent.event.Event;
 import com.lyra.agent.event.EventBus;
 import com.lyra.agent.event.EventListener;
 import com.lyra.agent.event.SimpleEventBus;
