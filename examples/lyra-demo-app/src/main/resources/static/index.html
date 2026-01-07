@@ -179,6 +179,15 @@
         <div class="event" style="text-align: center; color: #9ca3af;">准备就绪，等待指令...</div>
     </div>
     
+    <details style="margin-top: 1rem;">
+        <summary style="cursor: pointer; padding: 0.5rem; background: #f3f4f6; border-radius: 0.5rem;">
+            <strong>日志面板</strong>
+        </summary>
+        <div class="log-panel" id="logPanel" style="margin-top: 0.5rem; max-height: 200px; overflow-y: auto; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 0.5rem; padding: 1rem; font-family: monospace; font-size: 0.8rem;">
+            <!-- Execution logs will appear here -->
+        </div>
+    </details>
+    
     <div class="status-bar" id="statusBar"></div>
 </div>
 
@@ -247,28 +256,54 @@
         if (type === 'agent.start') {
             div.classList.add('agent-start');
             div.textContent = `▶︎ 开始执行任务: ${data.query}`;
+            logToPanel(`[START] 开始执行任务: ${data.query}`);
         } else if (type === 'agent.step') {
             div.classList.add('agent-step');
             div.textContent = `第 ${data.step} 步`;
+            logToPanel(`[STEP ${data.step}] 执行第${data.step}步`);
+        } else if (type === 'agent.thought') {
+            div.classList.add('thought');
+            div.textContent = `思考: ${data.thought}`;
+            logToPanel(`[THOUGHT] 思考: ${data.thought}`);
         } else if (type === 'agent.tool.start') {
             div.classList.add('tool-start');
             div.textContent = `⚙ 调用工具 [${data.name}]: ${data.input}`;
+            logToPanel(`[TOOL] 调用工具 [${data.name}]: ${data.input}`);
         } else if (type === 'agent.tool.end') {
             div.classList.add('tool-end');
             div.textContent = `✓ 工具返回: ${data.result}`;
+            logToPanel(`[TOOL RESULT] 工具返回: ${data.result}`);
         } else if (type === 'agent.finish') {
             div.classList.add('agent-finish');
             div.innerHTML = `★ 最终答案:<br>${data.answer.replace(/\n/g, '<br>')}`;
+            logToPanel(`[FINISH] 最终答案: ${data.answer.substring(0, 100)}${data.answer.length > 100 ? '...' : ''}`);
         } else if (type === 'agent.error') {
             div.classList.add('error');
             div.textContent = `⚠ 错误: ${data.message}`;
+            logToPanel(`[ERROR] 错误: ${data.message}`);
+        } else if (type === 'agent.timeout') {
+            div.classList.add('error');
+            div.textContent = `⚠ 超时: 达到最大步骤数 ${data.maxSteps}`;
+            logToPanel(`[TIMEOUT] 达到最大步骤数 ${data.maxSteps}`);
         } else {
             // Generic fallback
             div.textContent = JSON.stringify(data);
+            logToPanel(`[INFO] ${JSON.stringify(data)}`);
         }
 
         chatWindow.appendChild(div);
         chatWindow.scrollTop = chatWindow.scrollHeight;
+    }
+    
+    function logToPanel(message) {
+        const logDiv = document.createElement('div');
+        const timestamp = new Date().toLocaleTimeString();
+        logDiv.textContent = `[${timestamp}] ${message}`;
+        document.getElementById('logPanel').appendChild(logDiv);
+        
+        // Auto-scroll to bottom
+        const logPanel = document.getElementById('logPanel');
+        logPanel.scrollTop = logPanel.scrollHeight;
     }
 </script>
 
