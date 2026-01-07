@@ -24,15 +24,13 @@ import java.util.stream.Collectors;
  * Implements the Reasoning + Action pattern with Thought -> Action -> Observation cycles.
  */
 public class ReactMode implements Mode {
-    private final LLMProvider llmProvider;
+    private static final Logger logger = LoggerFactory.getLogger(ReactMode.class);
     private final ToolRegistry toolRegistry;
     private final EventBus eventBus;
     private final int maxSteps;
     private final Resource promptTemplate;
-    private static final Logger logger = LoggerFactory.getLogger(ReactMode.class);
 
     public ReactMode(LLMProvider llmProvider, ToolRegistry toolRegistry, EventBus eventBus, int maxSteps, Resource promptTemplate) {
-        this.llmProvider = llmProvider;
         this.toolRegistry = toolRegistry;
         this.eventBus = eventBus;
         this.maxSteps = maxSteps;
@@ -50,7 +48,7 @@ public class ReactMode implements Mode {
         List<Message> messages = new ArrayList<>(context.getMessages());
         AgentMemory memory = context.getMemory();
         List<Trace> trace = new ArrayList<>(context.getTrace());
-        int stepCount = 0;
+        int stepCount;
 
         logger.debug("Publishing agent start event");
         eventBus.publish(new AgentEvent("agent.start", Map.of("mode", name(), "agentId", "default")));
@@ -67,6 +65,10 @@ public class ReactMode implements Mode {
             // Build prompt with current state
             logger.debug("Building prompt for step {}", stepCount);
             String prompt = buildPrompt(messages, context.getMemory());
+            logger.info("========== ReAct Prompt for Step {} ==========", stepCount);
+            logger.info("Prompt length: {} characters", prompt.length());
+            logger.info("Full Prompt:\n{}", prompt);
+            logger.info("========== End of Prompt ==========");
             List<Message> promptMessages = List.of(Message.user(prompt));
 
             // Get LLM response
@@ -195,8 +197,6 @@ public class ReactMode implements Mode {
      * Builds the prompt for the LLM based on the current state.
      *
      * @param messages The current conversation messages
-     * @param messages The current conversation messages
-     * @param agentMemory The agent's memory
      * @return The formatted prompt string
      */
     private String buildPrompt(List<Message> messages, AgentMemory agentMemory) {
