@@ -65,12 +65,12 @@ mvn clean install
 This will:
 1. Build the core framework (`lyra-agent-core`)
 2. Install it to local Maven repository
-3. Build the demo application (`examples/lyra-demo-app`)
+3. Build the demo application (`lyra-demo-app`)
 
 ### Running the Demo Application
 
 ```bash
-cd examples/lyra-demo-app
+cd lyra-demo-app
 mvn spring-boot:run
 ```
 
