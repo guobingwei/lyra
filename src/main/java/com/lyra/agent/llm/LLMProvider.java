@@ -4,6 +4,7 @@ import com.lyra.agent.agent.Message;
 
 import java.util.List;
 import java.util.Map;
+import java.util.function.Consumer;
 
 /**
  * LLM 提供者接口。
@@ -17,6 +18,16 @@ public interface LLMProvider extends LlmClient {
      * @return 模型返回的文本
      */
     String generate(String prompt);
+
+    /**
+     * 根据给定 Prompt 生成流式文本响应。
+     *
+     * @param prompt 输入提示
+     * @param chunkConsumer 消费每个响应块的回调函数
+     */
+    default void generateStream(String prompt, Consumer<StreamChunk> chunkConsumer) {
+        throw new UnsupportedOperationException("Streaming not implemented");
+    }
 
     /**
      * Send a chat request to the LLM and get a response.
@@ -35,6 +46,23 @@ public interface LLMProvider extends LlmClient {
         }
         String response = generate(prompt.toString());
         return new LlmResponse(response, Map.of(), "stop");
+    }
+
+    /**
+     * Send a chat request to the LLM and get a streaming response.
+     * This method is inherited from LlmClient.
+     * @param messages list of messages in the conversation
+     * @param options additional options for the LLM call
+     * @param chunkConsumer consumer that will receive each chunk of the response
+     */
+    @Override
+    default void streamChat(List<Message> messages, Map<String, Object> options, Consumer<StreamChunk> chunkConsumer) {
+        // Default implementation that converts messages to a prompt string
+        StringBuilder prompt = new StringBuilder();
+        for (Message msg : messages) {
+            prompt.append(msg.getRole().name()).append(": ").append(msg.getContent()).append("\n");
+        }
+        generateStream(prompt.toString(), chunkConsumer);
     }
 
     /**

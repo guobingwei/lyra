@@ -4,6 +4,7 @@ import com.lyra.agent.agent.Message;
 
 import java.util.List;
 import java.util.Map;
+import java.util.function.Consumer;
 
 /**
  * LLM client interface that abstracts calls to large language models.
@@ -22,11 +23,9 @@ public interface LlmClient {
      * Send a chat request to the LLM and get a streaming response.
      * @param messages list of messages in the conversation
      * @param options additional options for the LLM call
-     * @return a stream of response chunks
+     * @param chunkConsumer consumer that will receive each chunk of the response
      */
-    // Note: We'll use a simple return here since Java doesn't have built-in streaming
-    // In a real implementation, this would return a Stream<LlmResponseChunk> or Publisher
-    default Object streamChat(List<Message> messages, Map<String, Object> options) {
+    default void streamChat(List<Message> messages, Map<String, Object> options, Consumer<StreamChunk> chunkConsumer) {
         throw new UnsupportedOperationException("Streaming not implemented");
     }
 

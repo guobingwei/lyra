@@ -48,13 +48,12 @@ public class ReactMode implements Mode {
         List<Message> messages = new ArrayList<>(context.getMessages());
         AgentMemory memory = context.getMemory();
         List<Trace> trace = new ArrayList<>(context.getTrace());
-        int stepCount;
 
         logger.debug("Publishing agent start event");
         eventBus.publish(new AgentEvent("agent.start", Map.of("mode", name(), "agentId", "default")));
 
         for (int step = 0; step < maxSteps; step++) {
-            stepCount = step + 1;
+            final int stepCount = step + 1;
             logger.info("Starting step {} of {}", stepCount, maxSteps);
             Trace stepTrace = Trace.start("trace-" + step, step, name(), "default", "reasoning", "Starting reasoning step " + step);
             trace.add(stepTrace);
@@ -71,14 +70,25 @@ public class ReactMode implements Mode {
             logger.info("========== End of Prompt ==========");
             List<Message> promptMessages = List.of(Message.user(prompt));
 
-            // Get LLM response
-            logger.debug("Calling LLM for step {}", stepCount);
-            com.lyra.agent.llm.LlmResponse response;
-            String output;
+            // Get LLM response with streaming
+            logger.debug("Calling LLM for step {} with streaming", stepCount);
+            final StringBuilder fullOutput = new StringBuilder();
+            
             try {
-                response = context.getLlmProvider().chat(promptMessages, context.getOptions());
-                output = response.getContent();
-                logger.debug("LLM response received for step {}: {}", stepCount, output.substring(0, Math.min(100, output.length())) + (output.length() > 100 ? "..." : ""));
+                context.getLlmProvider().streamChat(promptMessages, context.getOptions(), chunk -> {
+                    if (chunk.getContent() != null && !chunk.getContent().isEmpty()) {
+                        fullOutput.append(chunk.getContent());
+                        // Publish streaming chunk event
+                        eventBus.publish(new AgentEvent("agent.stream.chunk", 
+                            Map.of("content", chunk.getContent(), "done", chunk.isDone())));
+                    }
+                    if (chunk.isDone()) {
+                        logger.debug("LLM streaming completed for step {}", stepCount);
+                    }
+                });
+                
+                logger.debug("LLM response received for step {}: {}", stepCount, 
+                    fullOutput.substring(0, Math.min(100, fullOutput.length())) + (fullOutput.length() > 100 ? "..." : ""));
             } catch (Exception e) {
                 String errorMsg = "LLM error: " + e.getMessage();
                 logger.error(errorMsg, e);
@@ -92,6 +102,7 @@ public class ReactMode implements Mode {
                 return ModeResult.interrupted(trace);
             }
 
+            String output = fullOutput.toString();
             // Check if the output contains an error message before parsing
             if (output.contains("Error calling") || output.contains("Too Many Requests") || output.contains("429")) {
                 String errorMsg = "LLM API Error: " + output;

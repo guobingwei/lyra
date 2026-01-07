@@ -145,6 +145,14 @@
             font-weight: 500;
         }
 
+        .event.streaming {
+            background-color: #f0f9ff;
+            color: #0c4a6e;
+            border-left: 4px solid #0ea5e9;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+
         .event.error {
             background-color: #fef2f2;
             color: #991b1b;
@@ -196,6 +204,7 @@
     const runBtn = document.getElementById('runBtn');
     const userInput = document.getElementById('userInput');
     const statusBar = document.getElementById('statusBar');
+    let currentStreamDiv = null;
 
     function handleKeyPress(e) {
         if (e.key === 'Enter') {
@@ -209,6 +218,7 @@
 
         // Reset UI
         chatWindow.innerHTML = '';
+        currentStreamDiv = null; // Reset streaming state
         runBtn.disabled = true;
         userInput.disabled = true;
         statusBar.textContent = 'Agent 正在运行...';
@@ -265,6 +275,26 @@
             div.classList.add('thought');
             div.textContent = `思考: ${data.thought}`;
             logToPanel(`[THOUGHT] 思考: ${data.thought}`);
+        } else if (type === 'agent.stream.chunk') {
+            // Handle streaming chunks
+            if (!currentStreamDiv) {
+                currentStreamDiv = document.createElement('div');
+                currentStreamDiv.className = 'event streaming';
+                currentStreamDiv.textContent = '';
+                chatWindow.appendChild(currentStreamDiv);
+            }
+            if (data.content) {
+                currentStreamDiv.textContent += data.content;
+                chatWindow.scrollTop = chatWindow.scrollHeight;
+            }
+            if (data.done) {
+                currentStreamDiv = null; // Reset for next streaming session
+            }
+            // Don't log every chunk, only log completion
+            if (data.done) {
+                logToPanel(`[STREAM] 流式输出完成`);
+            }
+            return; // Don't append div since we're updating currentStreamDiv
         } else if (type === 'agent.tool.start') {
             div.classList.add('tool-start');
             div.textContent = `⚙ 调用工具 [${data.name}]: ${data.input}`;

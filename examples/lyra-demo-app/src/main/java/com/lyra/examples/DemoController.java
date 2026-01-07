@@ -88,6 +88,7 @@ public class DemoController {
                 localEventBus.subscribe("agent.start", listener);
                 localEventBus.subscribe("agent.step", listener);
                 localEventBus.subscribe("agent.thought", listener);
+                localEventBus.subscribe("agent.stream.chunk", listener);
                 localEventBus.subscribe("agent.tool.start", listener);
                 localEventBus.subscribe("agent.tool.end", listener);
                 localEventBus.subscribe("agent.finish", listener);
