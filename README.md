@@ -52,6 +52,11 @@ A demonstration application that shows how to use the framework:
 - Structured logging panel
 - Example controller showing framework integration
 
+![p1](./docs/img/img.png)
+![p1](./docs/img/img_1.png)
+![p1](./docs/img/img_2.png)
+
+ 
 ## Getting Started
 
 ### Building the Project
